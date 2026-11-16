@@ -1,0 +1,18 @@
+# Simulation outputs
+*.vcd
+*.fst
+*.wlf
+*.vpd
+*.log
+
+# Generated simulation directories
+sim/build/
+sim/obj_dir/
+
+# Synthesis outputs
+synthesis/output/
+synthesis/reports/generated/
+
+# Editor and OS files
+.DS_Store
+.vscode/
