@@ -7,7 +7,7 @@ module gray_to_binary #(
     
     genvar i;
     for (i = 0; i<WIDTH; i=i+1) begin
-        binary[i] = ^gray[WIDTH-1:i];
+        assign binary[i] = ^gray[WIDTH-1:i];
     end
 
 endmodule

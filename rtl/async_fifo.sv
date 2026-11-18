@@ -20,6 +20,7 @@ module async_fifo #(
     logic[PTR_WIDTH-1 : 0] wr_bin, rd_bin, wr_gray, rd_gray, wr_gray_sync, rd_gray_sync;
     logic[ADDR_WIDTH-1 : 0] wr_addr, rd_addr;
     logic wr_accept, rd_accept;
+    logic[PTR_WIDTH-1 : 0] wr_bin_next, rd_bin_next, wr_gray_next, rd_gray_next;
 
     // read, write acceptance logic
     assign wr_accept = wr_en && !full;
@@ -28,6 +29,12 @@ module async_fifo #(
     // extracting address
     assign wr_addr = wr_bin[ADDR_WIDTH-1 : 0];
     assign rd_addr = rd_bin[ADDR_WIDTH-1 : 0];
+
+    // Next pointer logic
+    assign wr_bin_next = wr_bin + wr_accept;
+    assign rd_bin_next = rd_bin + rd_accept;
+    assign wr_gray_next = wr_bin_next ^ (wr_bin_next >> 1);
+    assign rd_gray_next = rd_bin_next ^ (rd_bin_next >> 1);
 
     // intantiating write module
     write_pointer wp1(
@@ -47,16 +54,16 @@ module async_fifo #(
         .rd_gray(rd_gray)
     );
 
-    // instantiating synchronizer for write
-    synchronizer #(.WIDTH(PTR_WIDTH)) swr(
+    // instantiating synchronizer for read
+    synchronizer #(.WIDTH(PTR_WIDTH)) srd(
         .clk(wr_clk),
         .rst_n(wr_rst_n),
         .async_in(rd_gray),
         .sync_out(rd_gray_sync)
     );
 
-    // instantiating sychronizer for read
-    synchronizer #(.WIDTH(PTR_WIDTH)) srd(
+    // instantiating sychronizer for write
+    synchronizer #(.WIDTH(PTR_WIDTH)) swr(
         .clk(rd_clk),
         .rst_n(rd_rst_n),
         .async_in(wr_gray),
@@ -77,5 +84,17 @@ module async_fifo #(
         .data_in(data_in),
         .data_out(data_out)
     );
+
+    // empty logic
+    always_ff @(posedge rd_clk or negedge rd_rst_n) begin
+        if (!rd_rst_n) empty <= 1'b1;
+        else empty <= wr_gray_sync == rd_gray_next;
+    end
+
+    // full logic
+    always_ff @(posedge wr_clk or negedge wr_rst_n) begin
+        if(!wr_rst_n) full <= 1'b0;
+        else full <= wr_gray_next == {~rd_gray_sync[PTR_WIDTH-1:PTR_WIDTH-2], rd_gray_sync[PTR_WIDTH-3:0]};
+    end
 
 endmodule
